@@ -1,0 +1,16 @@
+# ----------------------------------------------------------------------
+# Security: block web access to everything outside public/
+# ----------------------------------------------------------------------
+# When Apache (for example XAMPP) serves this whole project folder, files
+# such as .env (database password, AI API key), app/, writable/ (logs) and
+# vendor/ must never be downloadable. Only public/ is allowed again, by its
+# own .htaccess. In production, point the web server's document root at
+# public/ instead.
+
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+</IfModule>
