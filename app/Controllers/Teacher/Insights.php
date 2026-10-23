@@ -5,12 +5,14 @@ namespace App\Controllers\Teacher;
 use App\Controllers\BaseController;
 use App\Libraries\Ai\AiException;
 use App\Libraries\ClassInsights;
+use App\Libraries\LessonPlanner;
 use App\Models\AssignmentModel;
 use App\Models\ClassModel;
 use App\Models\LessonPlanModel;
 use App\Models\RubricModel;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\RedirectResponse;
+use RuntimeException;
 
 /**
  * Classroom Insight Dashboard and lesson-plan drafts (FR-11).
@@ -41,36 +43,19 @@ class Insights extends BaseController
     public function generatePlan(int $id): RedirectResponse
     {
         $assignment = $this->findAssignmentOr404($id);
-        $insights   = (new ClassInsights())->forAssignment($assignment);
         $back       = redirect()->to(site_url("teacher/assignments/{$id}/insights#lesson-plans"));
 
         if (! service('systemSettings')->aiEnabled()) {
             return $back->with('error', 'AI features are turned off, so lesson plans cannot be generated.');
         }
 
-        if ($insights['gradedCount'] === 0) {
-            return $back->with('error', 'Finalize at least one grade before generating a lesson plan.');
-        }
-
-        $focus    = ClassInsights::lessonFocus($insights);
-        $analyzer = service('essayAnalyzer');
-
         try {
-            $plan = $analyzer->lessonPlan($focus);
+            $planId = (new LessonPlanner(db_connect()))->generate($assignment, $this->userId());
         } catch (AiException $e) {
             return $back->with('error', 'The lesson plan could not be generated: ' . $e->getMessage());
+        } catch (RuntimeException $e) {
+            return $back->with('error', $e->getMessage());
         }
-
-        $planId = model(LessonPlanModel::class)->insert([
-            'assignment_id' => $id,
-            'teacher_id'    => $this->userId(),
-            'title'         => mb_substr($plan['title'], 0, 200),
-            'content'       => LessonPlanModel::toText($plan),
-            'focus'         => json_encode($focus, JSON_UNESCAPED_UNICODE),
-            'provider'      => $analyzer->provider(),
-        ]);
-
-        audit_log('lesson_plan.generated', 'lesson_plan', $planId, ['assignment_id' => $id]);
 
         return redirect()->to(site_url("teacher/lesson-plans/{$planId}"))
             ->with('success', 'Draft lesson plan created. Review and edit it before using it in class.');

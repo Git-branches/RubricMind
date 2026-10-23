@@ -1839,6 +1839,33 @@ body:has(dialog[open]) { overflow: hidden; }
 .evidence--0 .evidence__tag, .evidence-list__number.evidence--0 { background: #c2410c; }
 
 .evidence:target { outline: 3px solid var(--primary-ring); }
+mark.evidence[data-evidence-criterion] { cursor: help; }
+mark.evidence:focus-visible { outline: 3px solid var(--primary-ring); outline-offset: 1px; }
+
+/* The note bubble opened by tapping a highlight (see app.js). */
+.has-evidence-note { position: relative; }
+
+.evidence-note {
+    position: absolute;
+    z-index: 5;
+    display: grid;
+    gap: 0.2rem;
+    max-width: min(320px, 90%);
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    box-shadow: var(--shadow-md);
+    color: var(--text);
+    font-family: Inter, system-ui, sans-serif;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    white-space: normal;
+}
+
+.evidence-note strong { font-size: 0.78rem; color: var(--primary); }
+
+.highlights-off .evidence[data-evidence-criterion] { cursor: text; }
 
 .highlights-off .evidence { background: none; border-bottom-color: transparent; }
 .highlights-off .evidence__tag { display: none; }

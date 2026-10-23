@@ -5,6 +5,7 @@ namespace App\Controllers\Teacher;
 use App\Controllers\BaseController;
 use App\Libraries\Ai\AiEvaluationService;
 use App\Libraries\GradingWorkflow;
+use App\Libraries\LessonPlanner;
 use App\Libraries\StyleTracker;
 use App\Libraries\SubmissionFiles;
 use App\Models\AiRunModel;
@@ -138,9 +139,16 @@ class Submissions extends BaseController
 
         $error = $workflow->finalize($evaluation, $this->findOr404($id));
 
-        return $error === null
-            ? $back->with('success', 'Grade finalized. Release it when the student should see it.')
-            : $back->with('warning', 'Scores saved, but the grade was not finalized. ' . $error);
+        if ($error !== null) {
+            return $back->with('warning', 'Scores saved, but the grade was not finalized. ' . $error);
+        }
+
+        // The last essay of the assignment is graded: prepare a draft lesson plan from the class results (FR-11).
+        $planId = (new LessonPlanner(db_connect()))->generateWhenGradingIsDone($assignment, $this->userId());
+
+        return $back->with('success', $planId === null
+            ? 'Grade finalized. Release it when the student should see it.'
+            : 'Grade finalized. All essays for this assignment are graded, so a draft lesson plan was created from the class results (see Insights).');
     }
 
     public function release(int $id): RedirectResponse

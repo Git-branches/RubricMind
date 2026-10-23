@@ -80,11 +80,15 @@ if (! function_exists('highlight_essay')) {
      * Each mark shows its criterion number, so highlights do not rely on color alone.
      * Unverified or overlapping quotes are not highlighted.
      *
-     * @param list<array{id: int, criterion_id: int, start: int|null, length: int|null, verified: bool}> $highlights
+     * Each mark also carries its criterion and note (FR-08): shown on hover, and as
+     * a small bubble when tapped or focused (see assets/js/app.js).
+     *
+     * @param list<array{id: int, criterion_id: int, start: int|null, length: int|null, verified: bool, note?: string|null}> $highlights
      * @param array<int, int>                                                                          $numbers    Criterion ID => position in the rubric (1-based).
      * @param bool                                                                                     $withIds    Add id="evidence-N" anchors. Use false for a second copy on the same page.
+     * @param array<int, string>                                                                       $titles     Criterion ID => criterion title.
      */
-    function highlight_essay(string $text, array $highlights, array $numbers, bool $withIds = true): string
+    function highlight_essay(string $text, array $highlights, array $numbers, bool $withIds = true, array $titles = []): string
     {
         $spans = array_values(array_filter($highlights, static fn (array $h) => $h['verified'] && $h['start'] !== null));
         usort($spans, static fn (array $a, array $b) => $a['start'] <=> $b['start']);
@@ -97,11 +101,17 @@ if (! function_exists('highlight_essay')) {
                 continue;
             }
 
-            $number = $numbers[$span['criterion_id']] ?? 0;
-            $html  .= esc(mb_substr($text, $position, $span['start'] - $position));
-            $html  .= '<mark class="evidence evidence--' . ($number % 6) . '"' . ($withIds ? ' id="evidence-' . $span['id'] . '"' : '') . '>'
-                . '<span class="visually-hidden">Evidence for criterion ' . $number . ': </span>'
+            $number    = $numbers[$span['criterion_id']] ?? 0;
+            $criterion = 'Criterion ' . $number . (isset($titles[$span['criterion_id']]) ? ': ' . $titles[$span['criterion_id']] : '');
+            $note      = trim((string) ($span['note'] ?? ''));
+
+            $html .= esc(mb_substr($text, $position, $span['start'] - $position));
+            $html .= '<mark class="evidence evidence--' . ($number % 6) . '"' . ($withIds ? ' id="evidence-' . $span['id'] . '"' : '')
+                . ' tabindex="0" data-evidence-note="' . esc($note, 'attr') . '" data-evidence-criterion="' . esc($criterion, 'attr') . '"'
+                . ' title="' . esc($criterion . ($note !== '' ? ' — ' . $note : ''), 'attr') . '">'
+                . '<span class="visually-hidden">Evidence for ' . esc($criterion) . ': </span>'
                 . esc(mb_substr($text, $span['start'], $span['length']))
+                . ($note !== '' ? '<span class="visually-hidden"> (Note: ' . esc($note) . ')</span>' : '')
                 . '<sup class="evidence__tag" aria-hidden="true">' . $number . '</sup></mark>';
             $position = $span['start'] + $span['length'];
         }

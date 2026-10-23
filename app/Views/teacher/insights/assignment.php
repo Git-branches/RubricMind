@@ -273,17 +273,17 @@ $levelColor = static function (int $index, int $count) use ($ramp): string {
     <div class="section-header">
         <div>
             <h2><?= icon('book-open') ?> Lesson-plan drafts</h2>
-            <p class="muted small">A draft targeted at the class's weakest criterion. Built only from class averages; no student names are used.</p>
+            <p class="muted small">A draft targeted at the class's weakest criterion, created automatically once every submitted essay is finalized. Built only from class averages; no student names are used.</p>
         </div>
         <?php if ($hasGrades && $aiEnabled): ?>
             <form method="post" action="<?= site_url("teacher/assignments/{$assignment['id']}/lesson-plans") ?>">
                 <?= csrf_field() ?>
-                <button type="submit" class="button button--primary"><?= icon('sparkles') ?> Generate lesson plan</button>
+                <button type="submit" class="button <?= $lessonPlans === [] ? 'button--primary' : '' ?>"><?= icon('sparkles') ?> <?= $lessonPlans === [] ? 'Generate lesson plan' : 'Generate a new version' ?></button>
             </form>
         <?php endif ?>
     </div>
     <?php if ($lessonPlans === []): ?>
-        <p class="muted">No lesson plans yet.</p>
+        <p class="muted">No lesson plans yet. One is created automatically when the last submitted essay is finalized<?= $hasGrades && $aiEnabled ? ', or create one now' : '' ?>.</p>
     <?php else: ?>
         <ul class="list">
             <?php foreach ($lessonPlans as $plan): ?>

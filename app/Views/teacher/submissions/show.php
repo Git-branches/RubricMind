@@ -27,11 +27,13 @@ $isFinal  = in_array($status, ['finalized', 'released'], true);
 $maxScore = App\Models\RubricModel::totalPoints($criteria);
 $canAskAi = $aiEnabled && ($evaluation === null || $editable);
 
-// Criterion ID => its number in the rubric, used to label highlights.
+// Criterion ID => its number and title in the rubric, used to label highlights.
 $numbers = [];
+$titles  = [];
 
 foreach ($criteria as $i => $criterion) {
     $numbers[(int) $criterion['id']] = $i + 1;
+    $titles[(int) $criterion['id']]  = $criterion['title'];
 }
 
 // Label results by the AI that produced them, not the one selected now.
@@ -126,48 +128,16 @@ if (! empty($ai['feedback'])) {
             </div>
             <?php if ($hasMarks): ?>
                 <p class="hint" style="margin-bottom: 0.75rem">
-                    Highlighted sentences are AI-suggested evidence. The small number shows which rubric criterion each one supports.
+                    Highlighted sentences are AI-suggested evidence. The small number shows which rubric criterion each one supports;
+                    point at or tap a highlight to see why it was chosen.
                 </p>
-                <div class="essay__text prewrap" data-highlights><?= highlight_essay($submission['content'], $highlights, $numbers) ?></div>
+                <div class="essay__text prewrap" data-highlights><?= highlight_essay($submission['content'], $highlights, $numbers, true, $titles) ?></div>
             <?php else: ?>
                 <div class="essay__text prewrap"><?= esc($submission['content']) ?></div>
             <?php endif ?>
         </section>
 
         <?php if ($ai !== null): ?>
-            <section class="card">
-                <div class="section-header">
-                    <div>
-                        <h2>Writing mechanics summary</h2>
-                        <p class="muted small">Recurring patterns, not every individual error. These are suggestions and may need review.</p>
-                    </div>
-                    <?php if ($resultsSimulated): ?><span class="tag tag--draft">Demo AI (simulated)</span><?php endif ?>
-                </div>
-                <?php if ($ai['patterns'] === []): ?>
-                    <p class="muted">No recurring mechanics patterns were found.</p>
-                <?php else: ?>
-                    <ul class="mechanics">
-                        <?php foreach ($ai['patterns'] as $pattern): ?>
-                            <li>
-                                <div class="mechanics__head">
-                                    <strong><?= esc($pattern['pattern']) ?></strong>
-                                    <span class="tag"><?= esc($pattern['occurrences']) ?>×</span>
-                                </div>
-                                <?php if (! empty($pattern['description'])): ?><p class="muted small"><?= esc($pattern['description']) ?></p><?php endif ?>
-                                <?php if ($pattern['examples'] !== []): ?>
-                                    <ul class="mechanics__examples">
-                                        <?php foreach ($pattern['examples'] as $example): ?>
-                                            <li>“<?= esc($example) ?>”</li>
-                                        <?php endforeach ?>
-                                    </ul>
-                                <?php endif ?>
-                                <?php if (! empty($pattern['suggestion'])): ?><p class="small"><?= icon('sparkles') ?> <?= esc($pattern['suggestion']) ?></p><?php endif ?>
-                            </li>
-                        <?php endforeach ?>
-                    </ul>
-                <?php endif ?>
-            </section>
-
             <?php if ($highlights !== []): ?>
                 <section class="card">
                     <h2>Evidence by criterion</h2>
@@ -387,7 +357,7 @@ if (! empty($ai['feedback'])) {
                             <h3 style="margin: 0">Essay</h3>
                             <span class="word-count"><?= icon('file-text') ?> <?= esc($submission['word_count']) ?> words</span>
                         </div>
-                        <div class="essay__text prewrap"><?= $hasMarks ? highlight_essay($submission['content'], $highlights, $numbers, false) : esc($submission['content']) ?></div>
+                        <div class="essay__text prewrap"><?= $hasMarks ? highlight_essay($submission['content'], $highlights, $numbers, false, $titles) : esc($submission['content']) ?></div>
                     </div>
 
                     <div class="modal__pane modal__pane--rubric">
@@ -537,6 +507,42 @@ if (! empty($ai['feedback'])) {
                         <button type="submit" class="button"><?= icon('pencil') ?> Change this grade</button>
                     </form>
                 </div>
+            </section>
+        <?php endif ?>
+
+        <?php if ($ai !== null): ?>
+            <!-- A clean sidebar summary instead of marking every error in the essay (FR-10). -->
+            <section class="card mechanics-card" id="mechanics">
+                <div class="section-header">
+                    <div>
+                        <h2>Writing mechanics summary</h2>
+                        <p class="muted small">Recurring patterns, not every individual error. Suggestions that may need review.</p>
+                    </div>
+                    <?php if ($resultsSimulated): ?><span class="tag tag--draft">Demo AI</span><?php endif ?>
+                </div>
+                <?php if ($ai['patterns'] === []): ?>
+                    <p class="muted" style="margin-bottom: 0">No recurring mechanics patterns were found.</p>
+                <?php else: ?>
+                    <ul class="mechanics">
+                        <?php foreach ($ai['patterns'] as $pattern): ?>
+                            <li>
+                                <div class="mechanics__head">
+                                    <strong><?= esc($pattern['pattern']) ?></strong>
+                                    <span class="tag"><?= esc($pattern['occurrences']) ?>×</span>
+                                </div>
+                                <?php if (! empty($pattern['description'])): ?><p class="muted small"><?= esc($pattern['description']) ?></p><?php endif ?>
+                                <?php if ($pattern['examples'] !== []): ?>
+                                    <ul class="mechanics__examples">
+                                        <?php foreach ($pattern['examples'] as $example): ?>
+                                            <li>“<?= esc($example) ?>”</li>
+                                        <?php endforeach ?>
+                                    </ul>
+                                <?php endif ?>
+                                <?php if (! empty($pattern['suggestion'])): ?><p class="small"><?= icon('sparkles') ?> <?= esc($pattern['suggestion']) ?></p><?php endif ?>
+                            </li>
+                        <?php endforeach ?>
+                    </ul>
+                <?php endif ?>
             </section>
         <?php endif ?>
 

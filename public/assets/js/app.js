@@ -227,6 +227,71 @@
         });
     }
 
+    // --- Evidence highlights: tap or press Enter on one to see its criterion and note ----
+
+    var evidenceBubble = null;
+
+    function closeEvidenceNote() {
+        if (evidenceBubble) {
+            evidenceBubble.remove();
+            evidenceBubble = null;
+        }
+    }
+
+    function openEvidenceNote(mark) {
+        closeEvidenceNote();
+
+        if (mark.closest('.highlights-off')) {
+            return;
+        }
+
+        // Inside the essay box, so it also works inside the grading dialog.
+        var box = mark.closest('.essay__text') || mark.parentElement;
+        box.classList.add('has-evidence-note');
+
+        evidenceBubble = document.createElement('div');
+        evidenceBubble.className = 'evidence-note';
+        evidenceBubble.setAttribute('role', 'status');
+
+        var title = document.createElement('strong');
+        title.textContent = mark.getAttribute('data-evidence-criterion');
+        evidenceBubble.appendChild(title);
+
+        var note = mark.getAttribute('data-evidence-note');
+        if (note) {
+            var text = document.createElement('span');
+            text.textContent = note;
+            evidenceBubble.appendChild(text);
+        }
+
+        box.appendChild(evidenceBubble);
+
+        var left = Math.max(0, Math.min(mark.offsetLeft, box.clientWidth - evidenceBubble.offsetWidth - 8));
+        evidenceBubble.style.top = (mark.offsetTop + mark.offsetHeight + 6) + 'px';
+        evidenceBubble.style.left = left + 'px';
+    }
+
+    document.addEventListener('click', function (event) {
+        var mark = event.target.closest('mark[data-evidence-criterion]');
+
+        if (mark) {
+            openEvidenceNote(mark);
+        } else if (!event.target.closest('.evidence-note')) {
+            closeEvidenceNote();
+        }
+    });
+
+    document.addEventListener('keydown', function (event) {
+        var mark = event.target.closest && event.target.closest('mark[data-evidence-criterion]');
+
+        if (mark && (event.key === 'Enter' || event.key === ' ')) {
+            event.preventDefault();
+            openEvidenceNote(mark);
+        } else if (event.key === 'Escape') {
+            closeEvidenceNote();
+        }
+    });
+
     // Reading a large PDF can take a few seconds: show that something is happening.
     document.addEventListener('submit', function (event) {
         var form = event.target.closest('[data-upload-form]');
